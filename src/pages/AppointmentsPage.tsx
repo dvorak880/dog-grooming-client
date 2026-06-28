@@ -12,6 +12,8 @@ import {
   Stack,
   TextField,
   Typography,
+  Snackbar,
+Alert,
 } from "@mui/material";
 import PetsIcon from "@mui/icons-material/Pets";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -22,7 +24,7 @@ import {
     MenuItem,
     DialogActions,
   } from "@mui/material";
-
+  import axios from "axios";
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -37,7 +39,9 @@ export default function AppointmentsPage() {
 const [addOpen, setAddOpen] = useState(false);
 const [groomingTypeId, setGroomingTypeId] = useState("");
 const [appointmentDateTime, setAppointmentDateTime] = useState("");
-  
+const [message, setMessage] = useState("");
+const [messageType, setMessageType] = useState<"success" | "error">("success");
+const currentUserId = Number(localStorage.getItem("userId"));
 
 const loadAppointments = async () => {
     const data = await appointmentService.getAppointments(
@@ -56,13 +60,21 @@ const loadAppointments = async () => {
     try {
       await appointmentService.deleteAppointment(id);
       await loadAppointments();
+  
+      setMessageType("success");
+      setMessage("התור נמחק בהצלחה");
     } catch (error) {
       console.error(error);
-      alert("לא ניתן למחוק את התור");
+  
+      setMessageType("error");
+  
+      if (axios.isAxiosError(error)) {
+        setMessage(error.response?.data ?? "לא ניתן למחוק את התור");
+      } else {
+        setMessage("לא ניתן למחוק את התור");
+      }
     }
   };
-
- 
 
   const handleCreate = async () => {
     try {
@@ -75,6 +87,8 @@ const loadAppointments = async () => {
       setGroomingTypeId("");
       setAppointmentDateTime("");
       await loadAppointments();
+      setMessageType("success");
+setMessage("הפעולה בוצעה בהצלחה");
     } catch (error) {
       console.error(error);
       alert("לא ניתן להוסיף את התור");
@@ -109,6 +123,8 @@ const loadAppointments = async () => {
       setEditGroomingTypeId("");
       setEditAppointmentDateTime("");
       await loadAppointments();
+      setMessageType("success");
+setMessage("הפעולה בוצעה בהצלחה");
     } catch (error) {
       console.error(error);
       alert("לא ניתן לעדכן את התור");
@@ -157,7 +173,14 @@ const loadAppointments = async () => {
             >
               <PetsIcon sx={{ fontSize: 42 }} />
             </Box>
-
+            <Typography
+  sx={{
+    opacity: 0.9,
+    mt: 1,
+  }}
+>
+  שלום {localStorage.getItem("firstName")}
+</Typography>
             <Typography variant="h4" sx={{ fontWeight: 800 }}>
               תורים למספרה
             </Typography>
@@ -294,30 +317,32 @@ const loadAppointments = async () => {
                           )}
                         </Stack>
 
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            variant="outlined"
-                            endIcon={<EditIcon />}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                openEditDialog(appointment);
-                              }}
-                          >
-                            ערוך
-                          </Button>
+                        {appointment.userId === currentUserId && (
+  <Stack direction="row" spacing={1}>
+    <Button
+      variant="outlined"
+      startIcon={<EditIcon />}
+      onClick={(e) => {
+        e.stopPropagation();
+        openEditDialog(appointment);
+      }}
+    >
+      ערוך
+    </Button>
 
-                          <Button
-                            color="error"
-                            variant="outlined"
-                            endIcon={<DeleteIcon />}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(appointment.appointmentId);
-                              }}
-                          >
-                            מחק
-                          </Button>
-                        </Stack>
+    <Button
+      color="error"
+      variant="outlined"
+      startIcon={<DeleteIcon />}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDelete(appointment.appointmentId);
+      }}
+    >
+      מחק
+    </Button>
+  </Stack>
+)}
                       </Stack>
                     </CardContent>
                   </Card>
@@ -458,6 +483,20 @@ const loadAppointments = async () => {
     </Button>
   </DialogActions>
 </Dialog>
+<Snackbar
+  open={!!message}
+  autoHideDuration={3000}
+  onClose={() => setMessage("")}
+  anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+>
+  <Alert
+    severity={messageType}
+    onClose={() => setMessage("")}
+    sx={{ width: "100%" }}
+  >
+    {message}
+  </Alert>
+</Snackbar>
     </Box>
   );
 }
